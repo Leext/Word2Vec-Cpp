@@ -15,31 +15,27 @@ void Word2vec::buildVocab(const char *filename, int minFreq)
 {
     Reader reader(filename);
     Trie trie;
-    std::cout << "build begin\n";
     while (!reader.end())
     {
-        auto&& word = std::move(reader.getWord());
+        auto &&word = std::move(reader.getWord());
         if (word.empty())
             continue;
-        trie.insert(word);
+        trie.insert(std::move(word));
     }
-    std::cout << "build end\n";
     vocab = std::move(trie.vocab);
-    std::cout << "after move\n";
     std::sort(vocab.begin(), vocab.end(),
               [](const Word &a, const Word &b) -> bool
               { return a.count > b.count; }
     );
-    std::cout << "after sort\n";
     auto cmpWord = Word();
     cmpWord.count = minFreq;
     auto it = std::lower_bound(vocab.begin(), vocab.end(), cmpWord,
                                [](const Word &a, const Word &b) -> bool
-                               { return a.count > b.count; }
+                               { return a.count >= b.count; }
     );
-//    vocab.erase(it, vocab.end());
+    vocab.erase(it, vocab.end());
     std::ofstream ofs("out.txt");
-    for (auto &w: trie.vocab)
+    for (auto &w: vocab)
     {
         ofs << *w.word << " " << w.count << std::endl;
     }

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 struct TrieNode
 {
@@ -17,7 +18,7 @@ struct TrieNode
 
 struct Word
 {
-    std::string* word;
+    std::shared_ptr<std::string> word;
     int count;
     Word();
     explicit Word(std::string && w);

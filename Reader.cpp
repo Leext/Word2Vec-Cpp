@@ -30,7 +30,8 @@ std::string Reader::getWord()
                 fs.unget();
             break;
         }
-        word.push_back(c);
+        if(!end())
+            word.push_back(c);
     }
     return word;
 }

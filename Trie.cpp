@@ -79,16 +79,14 @@ Word::Word() : word(nullptr), count(0)
 Word::Word(std::string &&w)
 {
     count = 1;
-    word = new std::string(w);
+    word = std::make_shared<std::string>(w);
 }
 
 Word::Word(std::string &w)
 {
     count = 1;
-    word = new std::string(w);
+    word = std::make_shared<std::string>(w);
 }
 
 Word::~Word()
-{
-    delete word;
-}
+= default;
