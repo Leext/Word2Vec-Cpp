@@ -30,7 +30,7 @@ std::string Reader::getWord()
                 fs.unget();
             break;
         }
-        if(!end())
+        if (!end())
             word.push_back(c);
     }
     return word;
@@ -41,11 +41,29 @@ Reader::Reader(const char *filename)
     fs.open(filename);
     if (!fs.good())
         std::cout << "cannot open file " << filename << std::endl;
+    fs.seekg(0, std::ifstream::end);
+    endPos = fs.tellg();
+    fs.seekg(0, std::ifstream::beg);
+}
+
+Reader::Reader(const char *filename, int totalPart, int part)
+{
+    fs.open(filename);
+    if (!fs.good())
+        std::cout << "cannot open file " << filename << std::endl;
+    fs.seekg(0, std::ifstream::end);
+    unsigned int fileSize = fs.tellg();
+    unsigned int startPos = part * (fileSize / totalPart);
+    fs.seekg(startPos, std::ifstream::beg);
+    if (part + 1 == totalPart)
+        endPos = fileSize;
+    else
+        endPos = (part + 1) * (fileSize / totalPart);
 }
 
 bool Reader::end()
 {
-    return fs.eof();
+    return fs.eof() || fs.tellg() >= endPos;
 }
 
 Reader::~Reader()
@@ -67,3 +85,5 @@ std::vector<string> Reader::getSentence()
     }
     return sentence;
 }
+
+

@@ -2,16 +2,16 @@
 // Created by Lee on 2020/7/23.
 //
 
-#include "Trie.h"
+#include "WordDict.h"
 #include <iostream>
 
-Trie::Trie()
+TrieDict::TrieDict()
 {
     rootIdx = 0;
     nodes.emplace_back();
 }
 
-void Trie::insert(std::string &word)
+void TrieDict::insert(std::string &word)
 {
     int nodeIdx = rootIdx;
     for (auto &c: word)
@@ -33,7 +33,7 @@ void Trie::insert(std::string &word)
     }
 }
 
-void Trie::insert(std::string &&word)
+void TrieDict::insert(std::string &&word)
 {
     int nodeIdx = rootIdx;
     for (auto &c: word)
@@ -55,7 +55,7 @@ void Trie::insert(std::string &&word)
     }
 }
 
-bool Trie::find(std::string &word)
+bool TrieDict::find(std::string &word)
 {
     int nodeIdx = rootIdx;
     for (auto &c: word)
@@ -89,4 +89,43 @@ Word::Word(std::string &w)
 }
 
 Word::~Word()
+= default;
+
+HashDict::HashDict()
+= default;
+
+void HashDict::insert(std::string &word)
+{
+    if (word2idx.find(word) == word2idx.end())
+    {
+        word2idx[word] = vocab.size();
+        vocab.emplace_back(word);
+    } else
+    {
+        vocab[word2idx[word]].count++;
+    }
+
+}
+
+void HashDict::insert(std::string &&word)
+{
+    if (word2idx.find(word) == word2idx.end())
+    {
+        word2idx[word] = vocab.size();
+        vocab.emplace_back(word);
+    } else
+    {
+        vocab[word2idx[word]].count++;
+    }
+}
+
+bool HashDict::find(std::string &word)
+{
+    return word2idx.find(word) != word2idx.end();
+}
+
+WordDict::WordDict()
+= default;
+
+WordDict::~WordDict()
 = default;

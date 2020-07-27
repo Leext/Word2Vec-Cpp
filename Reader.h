@@ -4,19 +4,28 @@
 
 #ifndef WORD2VEC_CPP_READER_H
 #define WORD2VEC_CPP_READER_H
+
 #include <fstream>
 #include <vector>
 
-class Reader {
+class Reader
+{
 public:
-    explicit Reader(const char* filename);
+    explicit Reader(const char *filename);
+
+    Reader(const char *filename, int totalPart, int part);
+
     std::string getWord();
+
     std::vector<std::string> getSentence();
+
     bool end();
+
     ~Reader();
 
 private:
     std::ifstream fs;
+    unsigned int endPos;
 };
 
 
