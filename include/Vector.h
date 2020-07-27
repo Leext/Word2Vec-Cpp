@@ -11,7 +11,7 @@ template<typename T>
 class Vector
 {
 public:
-    Vector(int size);
+    explicit Vector(int size);
 
     Vector(int size, T val);
 
@@ -23,7 +23,7 @@ public:
 
     Vector<T> &operator=(const Vector<T> &other);
 
-    Vector<T> &operator=(Vector<T> &&other);
+    Vector<T> &operator=(Vector<T> &&other) noexcept;
 
     ~Vector();
 
@@ -121,7 +121,7 @@ Vector<T> &Vector<T>::operator=(const Vector<T> &other)
 }
 
 template<typename T>
-Vector<T> &Vector<T>::operator=(Vector<T> &&other)
+Vector<T> &Vector<T>::operator=(Vector<T> &&other) noexcept
 {
     if (this == &other)
         return *this;
