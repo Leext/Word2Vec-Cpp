@@ -12,6 +12,8 @@
 #include "NegativeSampling.h"
 #include <string>
 
+#define MAX_THREAD 64
+
 class Word2vec
 {
 public:
@@ -19,14 +21,15 @@ public:
 
     void buildVocab(const char *filename, int minFreq = 5);
 
-    void train(const char *filename, int thread = 1, double lr = 1e-3);
+    void train(const char *filename, int numIter = 5, int numThread = 1, double lr = 1e-3);
+
 
     void init();
 
     void dump(const char *filename);
 
 private:
-    void runStep();
+    void trainThread(const char *filename, int numIter, int threadId, int numThread, double lr);
 
     int embeddingSize;
     int cbow;

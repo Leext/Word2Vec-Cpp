@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <ctime>
+#include <thread>
 
 #define PRINT_PER_LINE 1000
 
@@ -44,66 +45,70 @@ void Word2vec::buildVocab(const char *filename, int minFreq)
         word2idx[*vocab[i].word] = i;
 }
 
-void Word2vec::train(const char *filename, int thread, double lr)
+void Word2vec::train(const char *filename, int numIter, int numThread, double lr)
 {
-    Reader reader(filename, 5, 0);
+    std::thread threads[MAX_THREAD];
+    numThread = std::min(numThread, MAX_THREAD);
+    if (numThread > 1)
+    {
+        for (int i = 0; i < numThread; i++)
+            threads[i] = std::thread(&Word2vec::trainThread, this, filename, numIter, i, numThread, lr);
+        for (int i = 0; i < numThread; i++)
+            threads[i].join();
+    } else
+        trainThread(filename, numIter, 0, 1, lr);
+}
+
+void Word2vec::trainThread(const char *filename, int numIter, int threadId, int numThread, double lr)
+{
+    Reader reader(filename, numThread, threadId);
     int lineCount = 0;
     int totalLine = 0;
-    printf("start training\n");
+//    printf("start training\n");
     time_t begin = time(0);
     auto sentence = std::vector<std::string>();
-    while (true)
+    for (int i = 0; i < numIter; i++)
     {
-        sentence = std::move(reader.getSentence());
-        if (sentence.empty())
-            break;
-        if (lineCount && lineCount % PRINT_PER_LINE == 0)
+        reader.reset();
+        while (true)
         {
-            totalLine += lineCount;
-            lineCount = 0;
-            printf("%d lines, time consume %ds\n", totalLine, time(0) - begin);
-        }
-        // get words index
-//        printf("line %d\n", lineCount);
-        auto wordIdx = std::vector<int>();
-        for (auto &w: sentence)
-            if (word2idx.find(w) != word2idx.end())
-                wordIdx.push_back(word2idx[w]);
-        if (wordIdx.empty())
-            continue;
-        std::vector<int> central, context;
-        for (int i = 0; i < wordIdx.size(); i++)
-        {
-            central = {wordIdx[i]};
-            context.clear();
-            for (int j = i - 1; j >= 0 && j >= i - window; j--)
-                context.push_back(wordIdx[j]);
-            for (int j = i + 1; j < wordIdx.size() && j <= i + window; j++)
-                context.push_back(wordIdx[j]);
-            if (context.empty())
+            sentence = std::move(reader.getSentence());
+//            printf("good %d\n", threadId);
+            if (sentence.empty())
+                break;
+            if (lineCount && lineCount % PRINT_PER_LINE == 0)
+            {
+                totalLine += lineCount;
+                lineCount = 0;
+//                printf("thread %d: %d lines, time consumed %ds\n", threadId, totalLine, time(0) - begin);
+            }
+            // get words index
+            auto wordIdx = std::vector<int>();
+            for (auto &w: sentence)
+                if (word2idx.find(w) != word2idx.end())
+                    wordIdx.push_back(word2idx[w]);
+            if (wordIdx.empty())
                 continue;
-            auto h = std::move(embedding->forward(context));
-            auto hGrad = std::move(negativeSampling->forwardAndBackward(h, central, lr));
-            embedding->backward(context, hGrad, lr);
+            std::vector<int> central, context;
+            for (int i = 0; i < wordIdx.size(); i++)
+            {
+                central = {wordIdx[i]};
+                context.clear();
+                for (int j = i - 1; j >= 0 && j >= i - window; j--)
+                    context.push_back(wordIdx[j]);
+                for (int j = i + 1; j < wordIdx.size() && j <= i + window; j++)
+                    context.push_back(wordIdx[j]);
+                if (context.empty())
+                    continue;
+                auto h = std::move(embedding->forward(context));
+                auto hGrad = std::move(negativeSampling->forwardAndBackward(h, central, lr));
+                embedding->backward(context, hGrad, lr);
+            }
+            lineCount++;
         }
-        lineCount++;
     }
 }
 
-void Word2vec::runStep()
-{
-    /*
-     * auto input = vector
-     * auto outputLabels = vector
-     * auto h = vector
-     * auto hGrad = vector
-     * auto out = sparse vector
-     * auto outGrad = sparse vector
-     *
-     * h = embedding.forward(input)
-     * out = output.forward(h)
-     */
-}
 
 void Word2vec::init()
 {
@@ -125,3 +130,4 @@ void Word2vec::dump(const char *filename)
     }
     ofs.close();
 }
+

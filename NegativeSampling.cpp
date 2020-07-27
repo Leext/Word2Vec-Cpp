@@ -38,7 +38,6 @@ NegativeSampling::NegativeSampling(int embeddingSize, int vocabSize, int sampleS
 vector NegativeSampling::forwardAndBackward(vector &h, std::vector<int> &wordIdx, double lr)
 {
     vector gradH(embeddingSize, .0);
-//    vector u(embeddingSize);
     // pos word
     int posIdx = wordIdx.front();
     auto w = vector(embeddingSize, &matrix[posIdx * embeddingSize]);
@@ -51,9 +50,10 @@ vector NegativeSampling::forwardAndBackward(vector &h, std::vector<int> &wordIdx
         w[i] -= lr * u * h[i];
     }
     // neg word
+    int negIdx;
     for (int i = 0; i < sampleSize; i++)
     {
-        int negIdx = negSample();
+        while ((negIdx = negSample()) == posIdx);
         // forward
         w = vector(embeddingSize, &matrix[negIdx * embeddingSize]);
         u = sigmoid(w.mul(h));

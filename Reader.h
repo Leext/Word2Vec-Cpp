@@ -21,11 +21,13 @@ public:
 
     bool end();
 
+    void reset();
+
     ~Reader();
 
 private:
     std::ifstream fs;
-    unsigned int endPos;
+    unsigned int startPos, endPos;
 };
 
 

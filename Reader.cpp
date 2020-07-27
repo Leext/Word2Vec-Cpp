@@ -41,6 +41,7 @@ Reader::Reader(const char *filename)
     fs.open(filename);
     if (!fs.good())
         std::cout << "cannot open file " << filename << std::endl;
+    startPos = 0;
     fs.seekg(0, std::ifstream::end);
     endPos = fs.tellg();
     fs.seekg(0, std::ifstream::beg);
@@ -53,7 +54,7 @@ Reader::Reader(const char *filename, int totalPart, int part)
         std::cout << "cannot open file " << filename << std::endl;
     fs.seekg(0, std::ifstream::end);
     unsigned int fileSize = fs.tellg();
-    unsigned int startPos = part * (fileSize / totalPart);
+    startPos = part * (fileSize / totalPart);
     fs.seekg(startPos, std::ifstream::beg);
     if (part + 1 == totalPart)
         endPos = fileSize;
@@ -84,6 +85,12 @@ std::vector<string> Reader::getSentence()
         sentence.push_back(std::move(getWord()));
     }
     return sentence;
+}
+
+void Reader::reset()
+{
+    if (fs.is_open())
+        fs.seekg(startPos, std::ifstream::beg);
 }
 
 
