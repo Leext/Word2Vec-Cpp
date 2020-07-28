@@ -19,14 +19,12 @@ struct HuffmanNode
 
     HuffmanNode(int count, int wordIdx, HuffmanNode *left = nullptr, HuffmanNode *right = nullptr);
 
-
     ~HuffmanNode();
 };
 
 HuffmanNode::HuffmanNode(int count, int wordIdx, HuffmanNode *left, HuffmanNode *right) : left(left), right(right),
                                                                                           count(count), wordIdx(wordIdx)
 {
-
 }
 
 HuffmanNode::~HuffmanNode()
@@ -48,7 +46,6 @@ public:
     HierarchicalSoftmax(int embeddingSize, int vocabSize, const std::vector<Word> &vocab);
 
     ~HierarchicalSoftmax();
-
 
     virtual Vector<T> forwardAndBackward(Vector<T> &h, int wordIdx, double lr);
 
@@ -93,9 +90,10 @@ HierarchicalSoftmax<T>::HierarchicalSoftmax(int embeddingSize, int vocabSize, co
     std::default_random_engine generator;
     std::normal_distribution<T> distribution;
     for (int i = 0; i < n; i++)
-        matrix[i] = distribution(generator);
+        matrix[i] = distribution(generator) / embeddingSize;
     // build huffman tree
     auto huffmanRoot = buildHuffmanTree(vocab);
+    // build path for each word
     wordidx2path = std::vector<std::vector<PathInfo>>(vocabSize);
     auto path = std::vector<PathInfo>();
     dfsGeneratePath(vocab, path, huffmanRoot);

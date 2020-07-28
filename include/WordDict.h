@@ -29,7 +29,6 @@ struct Word
 
     explicit Word(std::string &w);
 
-    ~Word();
 };
 
 class WordDict
@@ -65,8 +64,6 @@ private:
 class HashDict : public WordDict
 {
 public:
-    HashDict();
-
     void insert(std::string &word) override;
 
     void insert(std::string &&word) override;
@@ -79,7 +76,6 @@ private:
 
 };
 
-#include <iostream>
 
 TrieDict::TrieDict()
 {
@@ -164,11 +160,6 @@ Word::Word(std::string &w)
     word = std::make_shared<std::string>(w);
 }
 
-Word::~Word()
-= default;
-
-HashDict::HashDict()
-= default;
 
 void HashDict::insert(std::string &word)
 {

@@ -38,7 +38,7 @@ Embedding<T>::Embedding(int vocabSize, int embeddingSize) : vocabSize(vocabSize)
     std::default_random_engine generator;
     std::normal_distribution<T> distribution;
     for (int i = 0; i < n; i++)
-        matrix[i] = distribution(generator);
+        matrix[i] = distribution(generator) / embeddingSize;
 }
 
 template<typename T>

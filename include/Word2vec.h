@@ -24,7 +24,7 @@ typedef float real;
 class Word2vec
 {
 public:
-    Word2vec(int embeddingSize, int cbow, int hs, int window);
+    Word2vec(int embeddingSize, int cbow, int hs, int window, int negSample = 10);
 
     void buildVocab(const char *filename, int minFreq = 5);
 
@@ -41,6 +41,7 @@ private:
     int cbow;
     int hs;
     int window;
+    int negSample;
     std::vector<Word> vocab;
     std::unordered_map<std::string, int> word2idx;
     Embedding<real> *embedding;
@@ -48,8 +49,10 @@ private:
 };
 
 
-Word2vec::Word2vec(int embeddingSize, int cbow, int hs, int window) : embeddingSize(embeddingSize), cbow(cbow), hs(hs),
-                                                                      window(window)
+Word2vec::Word2vec(int embeddingSize, int cbow, int hs, int window, int negSample) : embeddingSize(embeddingSize),
+                                                                                     cbow(cbow), hs(hs),
+                                                                                     window(window),
+                                                                                     negSample(negSample)
 {
     embedding = nullptr;
     outputLayer = nullptr;
@@ -165,22 +168,27 @@ void Word2vec::init()
     if (hs)
         outputLayer = new HierarchicalSoftmax<real>(embeddingSize, vocab.size(), vocab);
     else
-        outputLayer = new NegativeSampling<real>(embeddingSize, vocab.size(), 10, vocab);
+        outputLayer = new NegativeSampling<real>(embeddingSize, vocab.size(), negSample, vocab);
 }
 
 void Word2vec::dump(const char *filename)
 {
-    auto ofs = std::ofstream(filename);
-    ofs << vocab.size() << " " << embeddingSize << std::endl;
+    FILE *fout = fopen(filename, "w");
+    if (fout == NULL)
+    {
+        printf("cannot open %s\n", filename);
+        return;
+    }
+    fprintf(fout, "%d %d\n", vocab.size(), embeddingSize);
     for (int i = 0; i < vocab.size(); i++)
     {
-        ofs << *vocab[i].word << " ";
+        fprintf(fout, "%s ", vocab[i].word->c_str());
         auto w = embedding->get(i);
         for (int j = 0; j < embeddingSize; j++)
-            ofs << w[j] << " ";
-        ofs << std::endl;
+            fprintf(fout, "%f ", w[j]);
+        fprintf(fout, "\n");
     }
-    ofs.close();
+    fclose(fout);
 }
 
 
