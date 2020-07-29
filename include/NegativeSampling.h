@@ -24,12 +24,13 @@ public:
 
     ~NegativeSampling();
 
-    Vector<T> forwardAndBackward(Vector<T> &h, int wordIdx, double lr);
+    Vector<T> *forwardAndBackward(Vector<T> &h, int wordIdx, T lr, Vector<T> *out = nullptr);
 
 private:
     T *matrix;
     std::vector<int> table;
-    int embeddingSize, vocabSize, sampleSize;
+    const int embeddingSize;
+    int vocabSize, sampleSize;
 
     std::uniform_int_distribution<int> intDistribution = std::uniform_int_distribution<int>(0, tableSize - 1);
     std::default_random_engine generator;
@@ -54,34 +55,47 @@ NegativeSampling<T>::NegativeSampling(int embeddingSize, int vocabSize, int samp
 }
 
 template<typename T>
-Vector<T> NegativeSampling<T>::forwardAndBackward(Vector<T> &h, int wordIdx, double lr)
+Vector<T> *NegativeSampling<T>::forwardAndBackward(Vector<T> &h, int wordIdx, T lr, Vector<T> *out)
 {
-    Vector<T> gradH(embeddingSize, .0);
-    auto w = Vector<T>(embeddingSize, &matrix[wordIdx * embeddingSize]);
+    Vector<T> *gradH;
+    if (out == nullptr)
+        gradH = new Vector<T>(embeddingSize, 0.0);
+    else
+    {
+        gradH = out;
+        for (int i = 0; i < embeddingSize; i++)
+            gradH->base[i] = 0;
+    }
+
+    int base = wordIdx * embeddingSize;
     // forward
-    auto u = sigmoid(w.mul(h)) - 1;
+    T u = 0;
+    for (int i = 0; i < embeddingSize; i++)
+        u += matrix[base + i] * h.base[i];
+    u = sigmoid(u) - 1;
     // backward
     for (int i = 0; i < embeddingSize; i++)
-    {
-        gradH[i] += u * w[i];
-        w[i] -= lr * u * h[i];
-    }
+        gradH->base[i] += u * matrix[base + i];
+    for (int i = 0; i < embeddingSize; i++)
+        matrix[base + i] -= lr * u * h.base[i];
     // neg word
     int negIdx;
     for (int i = 0; i < sampleSize; i++)
     {
         while ((negIdx = negSample()) == wordIdx);
         // forward
-        w = Vector<T>(embeddingSize, &matrix[negIdx * embeddingSize]);
-        u = sigmoid(w.mul(h));
+        base = negIdx * embeddingSize;
+        u = 0;
+        for (int j = 0; j < embeddingSize; j++)
+            u += matrix[base + j] * h.base[j];
+        u = sigmoid(u);
         // backward
-        for (int i = 0; i < embeddingSize; i++)
-        {
-            gradH[i] += u * w[i];
-            w[i] -= lr * u * h[i];
-        }
+        for (int j = 0; j < embeddingSize; j++)
+            gradH->base[j] += u * matrix[base + j];
+        for (int j = 0; j < embeddingSize; j++)
+            matrix[base + j] -= lr * u * h.base[j];
     }
-    return std::move(gradH);
+    return gradH;
 }
 
 template<typename T>

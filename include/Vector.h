@@ -33,8 +33,8 @@ public:
 
     int size() const;
 
-private:
     T *base;
+private:
     bool shared;
     int _size;
 

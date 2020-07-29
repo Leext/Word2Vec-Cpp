@@ -10,6 +10,7 @@
 #include "Embedding.h"
 #include "NegativeSampling.h"
 #include "HierarchicalSoftmax.h"
+#include "Common.h"
 #include <string>
 #include <algorithm>
 #include <iostream>
@@ -28,14 +29,14 @@ public:
 
     void buildVocab(const char *filename, int minFreq = 5);
 
-    void train(const char *filename, int numIter = 5, int numThread = 1, double lr = 1e-3);
+    void train(const char *filename, int numIter = 5, int numThread = 1, real lr = 1e-3);
 
     void init();
 
     void dump(const char *filename);
 
 private:
-    void trainThread(const char *filename, int numIter, int threadId, int numThread, double lr);
+    void trainThread(const char *filename, int numIter, int threadId, int numThread, real lr);
 
     int embeddingSize;
     int cbow;
@@ -64,11 +65,12 @@ void Word2vec::buildVocab(const char *filename, int minFreq)
     WordDict *dict = new HashDict();
     while (!reader.end())
     {
-        auto &&word = std::move(reader.getWord());
+        auto word = std::move(reader.getWord());
         if (word.empty())
             continue;
         dict->insert(std::move(word));
     }
+    printf("build complete\n");
     vocab = std::move(dict->vocab);
     delete dict;
     std::sort(vocab.begin(), vocab.end(),
@@ -82,11 +84,12 @@ void Word2vec::buildVocab(const char *filename, int minFreq)
                                { return a.count >= b.count; }
     );
     vocab.erase(it, vocab.end());
+    printf("vocab size %d\n", vocab.size());
     for (int i = 0; i < vocab.size(); i++)
         word2idx[*vocab[i].word] = i;
 }
 
-void Word2vec::train(const char *filename, int numIter, int numThread, double lr)
+void Word2vec::train(const char *filename, int numIter, int numThread, real lr)
 {
     std::thread threads[MAX_THREAD];
     numThread = std::min(numThread, MAX_THREAD);
@@ -100,14 +103,18 @@ void Word2vec::train(const char *filename, int numIter, int numThread, double lr
         trainThread(filename, numIter, 0, 1, lr);
 }
 
-void Word2vec::trainThread(const char *filename, int numIter, int threadId, int numThread, double lr)
+void Word2vec::trainThread(const char *filename, int numIter, int threadId, int numThread, real lr)
 {
     Reader reader(filename, numThread, threadId);
     int lineCount = 0;
     int totalLine = 0;
+    int bpCount = 0;
 //    printf("start training\n");
     time_t begin = time(0);
     auto sentence = std::vector<std::string>();
+    Vector<real> *h, *hGrad;
+    h = new Vector<real>(embeddingSize);
+    hGrad = new Vector<real>(embeddingSize);
     for (int i = 0; i < numIter; i++)
     {
         reader.reset();
@@ -130,35 +137,37 @@ void Word2vec::trainThread(const char *filename, int numIter, int threadId, int 
                     wordIdx.push_back(word2idx[w]);
             if (wordIdx.empty())
                 continue;
-            std::vector<int> central, context;
-            for (int i = 0; i < wordIdx.size(); i++)
+            int n = wordIdx.size();
+            for (int i = 0; i < n; i++)
             {
-                central = {wordIdx[i]};
-                context.clear();
-                for (int j = i - 1; j >= 0 && j >= i - window; j--)
-                    context.push_back(wordIdx[j]);
-                for (int j = i + 1; j < wordIdx.size() && j <= i + window; j++)
-                    context.push_back(wordIdx[j]);
-                if (context.empty())
+                auto sentView = SentenceView(wordIdx,
+                                             std::max(0, i - window),
+                                             std::min(n, i + window + 1),
+                                             i);
+                if (sentView.right - sentView.left - 1 <= 0)
                     continue;
+                bpCount++;
                 if (cbow) // CBOW
                 {
-                    auto h = std::move(embedding->forward(context));
-                    auto hGrad = std::move(outputLayer->forwardAndBackward(h, central.front(), lr));
-                    embedding->backward(context, hGrad, lr);
+                    embedding->forward(sentView, cbow, h);
+                    outputLayer->forwardAndBackward(*h, sentView.sent[sentView.central], lr, hGrad);
+                    embedding->backward(sentView, *hGrad, lr, cbow);
                 } else // skip-gram
                 {
-                    for (const int &idx: context)
+                    for (int j = sentView.left; j < sentView.right; j++)
                     {
-                        auto h = std::move(embedding->forward(central));
-                        auto hGrad = std::move(outputLayer->forwardAndBackward(h, idx, lr));
-                        embedding->backward(central, hGrad, lr);
+                        if (j == sentView.central)
+                            continue;
+                        embedding->forward(sentView, cbow, h);
+                        outputLayer->forwardAndBackward(*h, sentView.sent[j], lr, hGrad);
+                        embedding->backward(sentView, *hGrad, lr, cbow);
                     }
                 }
             }
             lineCount++;
         }
     }
+    printf("bp count %d\n", bpCount);
 }
 
 

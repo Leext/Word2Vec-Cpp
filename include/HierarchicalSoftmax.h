@@ -47,7 +47,7 @@ public:
 
     ~HierarchicalSoftmax();
 
-    virtual Vector<T> forwardAndBackward(Vector<T> &h, int wordIdx, double lr);
+    Vector<T> *forwardAndBackward(Vector<T> &h, int wordIdx, T lr, Vector<T> *out = nullptr);
 
 private:
     T *matrix;
@@ -60,9 +60,17 @@ private:
 };
 
 template<typename T>
-Vector<T> HierarchicalSoftmax<T>::forwardAndBackward(Vector<T> &h, int wordIdx, double lr)
+Vector<T> *HierarchicalSoftmax<T>::forwardAndBackward(Vector<T> &h, int wordIdx, T lr, Vector<T> *out)
 {
-    auto gradH = Vector<T>(embeddingSize, .0);
+    Vector<T> *gradH;
+    if (out == nullptr)
+        gradH = new Vector<T>(embeddingSize, 0.0);
+    else
+    {
+        gradH = out;
+        for (int i = 0; i < embeddingSize; i++)
+            gradH->base[i] = 0;
+    }
     auto &path = wordidx2path[wordIdx];
     for (auto &node : path)
     {
@@ -73,11 +81,11 @@ Vector<T> HierarchicalSoftmax<T>::forwardAndBackward(Vector<T> &h, int wordIdx, 
         // backward
         for (int i = 0; i < embeddingSize; i++)
         {
-            gradH[i] += u * w[i];
+            gradH->base[i] += u * w[i];
             w[i] -= lr * u * h[i];
         }
     }
-    return std::move(gradH);
+    return gradH;
 }
 
 template<typename T>

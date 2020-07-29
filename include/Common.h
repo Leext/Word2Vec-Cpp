@@ -26,4 +26,15 @@ inline T sigmoid(T x)
     return 1 / (1 + exp_fn<T>(-x));
 }
 
+
+struct SentenceView
+{
+    std::vector<int> &sent;
+    int left, right, central;
+
+    SentenceView(std::vector<int> &sent, int left, int right, int central) : sent(sent), left(left), right(right),
+                                                                             central(central)
+    {}
+};
+
 #endif //WORD2VEC_CPP_COMMON_H

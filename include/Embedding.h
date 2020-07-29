@@ -8,6 +8,7 @@
 #include <vector>
 #include <random>
 #include "Vector.h"
+#include "Common.h"
 
 template<typename T>
 class Embedding
@@ -17,9 +18,9 @@ public:
 
     ~Embedding();
 
-    Vector<T> forward(std::vector<int> &wordIdx);
+    Vector<T> *forward(SentenceView &sentView, int cbow, Vector<T> *out);
 
-    void backward(std::vector<int> &wordIdx, Vector<T> &grad, double lr);
+    void backward(SentenceView &sentView, Vector<T> &grad, double lr, int cbow);
 
     Vector<T> get(int idx);
 
@@ -48,35 +49,69 @@ Embedding<T>::~Embedding()
 }
 
 template<typename T>
-Vector<T> Embedding<T>::forward(std::vector<int> &wordIdx)
+Vector<T> *Embedding<T>::forward(SentenceView &sentView, int cbow, Vector<T> *out)
 {
-    auto res = Vector<T>(embeddingSize, .0);
-    if (wordIdx.empty())
+    Vector<T> *res;
+    if (out == nullptr)
+        res = new Vector<T>(embeddingSize, 0.0);
+    else
     {
-        printf("warning : empty input wordIdx!\n");
-        return res;
-    }
-    int C = wordIdx.size();
-    for (auto &idx: wordIdx)
-    {
-        int base = embeddingSize * idx;
+        res = out;
         for (int i = 0; i < embeddingSize; i++)
-            res[i] += matrix[base + i];
+            res->base[i] = 0;
     }
-    for (int i = 0; i < embeddingSize; i++)
-        res[i] /= C;
-    return std::move(res);
+    int idx, base;
+    if (cbow)
+    {
+        if (sentView.right - sentView.left - 1 <= 0)
+        {
+            printf("warning : empty input wordIdx!\n");
+            return res;
+        }
+        int C = sentView.right - sentView.left - 1;
+        for (int j = sentView.left; j < sentView.right; j++)
+        {
+            if (j == sentView.central)
+                continue;
+            idx = sentView.sent[j];
+            base = embeddingSize * idx;
+            for (int i = 0; i < embeddingSize; i++)
+                res->base[i] += matrix[base + i];
+        }
+        for (int i = 0; i < embeddingSize; i++)
+            res->base[i] /= C;
+    } else
+    {
+        idx = sentView.sent[sentView.central];
+        base = embeddingSize * idx;
+        for (int i = 0; i < embeddingSize; i++)
+            res->base[i] += matrix[base + i];
+    }
+    return res;
 }
 
 template<typename T>
-void Embedding<T>::backward(std::vector<int> &wordIdx, Vector<T> &grad, double lr)
+void Embedding<T>::backward(SentenceView &sentView, Vector<T> &grad, double lr, int cbow)
 {
-    int C = wordIdx.size();
-    for (auto &idx: wordIdx)
+    int idx, base;
+    if (cbow)
     {
-        int base = embeddingSize * idx;
+        int C = sentView.right - sentView.left - 1;
+        for (int j = sentView.left; j < sentView.right; j++)
+        {
+            if (j == sentView.central)
+                continue;
+            idx = sentView.sent[j];
+            base = embeddingSize * idx;
+            for (int i = 0; i < embeddingSize; i++)
+                matrix[base + i] -= lr * grad.base[i] / C;
+        }
+    } else
+    {
+        idx = sentView.sent[sentView.central];
+        base = embeddingSize * idx;
         for (int i = 0; i < embeddingSize; i++)
-            matrix[base + i] -= lr * grad[i] / C;
+            matrix[base + i] -= lr * grad.base[i];
     }
 }
 

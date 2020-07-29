@@ -12,7 +12,9 @@ template<typename T>
 class OutputLayer
 {
 public:
-    virtual Vector<T> forwardAndBackward(Vector<T> &h, int wordIdx, double lr) = 0;
+    virtual Vector<T> *forwardAndBackward(Vector<T> &h, int wordIdx, T lr, Vector<T> *out) = 0;
+
+//    virtual ~OutputLayer() = 0;
 };
 
 

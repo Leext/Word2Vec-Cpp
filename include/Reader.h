@@ -7,9 +7,11 @@
 
 #include <fstream>
 #include <vector>
-#include "Reader.h"
+#include <cstdio>
 #include <iostream>
 #include <string>
+
+#define MAX_WORD_LENGTH 100
 
 class Reader
 {
@@ -17,6 +19,8 @@ public:
     explicit Reader(const char *filename);
 
     Reader(const char *filename, int totalPart, int part);
+
+    int getChar();
 
     std::string getWord();
 
@@ -29,8 +33,13 @@ public:
     ~Reader();
 
 private:
-    std::ifstream fs;
-    unsigned int startPos, endPos;
+    char *buffer;
+    char *wordBuffer;
+    int bufferSize;
+    int bufferLen;
+    int point;
+    FILE *fin;
+    long int startPos, endPos;
 };
 
 
@@ -41,75 +50,126 @@ inline bool isSpace(int c)
     return c == ' ' || c == '\t' || c == '\n';
 }
 
+int Reader::getChar()
+{
+
+    if (point >= bufferLen)
+    {
+        bufferLen = fread(buffer, 1, bufferSize, fin);
+        point = 0;
+    }
+    if (point < bufferLen)
+    {
+//        printf("%c ", buffer[point]);
+        return buffer[point++];
+    } else
+        return 0;
+}
+
+
 std::string Reader::getWord()
 {
-    string word;
+    int len = 0;
     int c;
-    while (!end() && isSpace(c = fs.get()));
-    if (end())
-        return word;
-    word.push_back(c);
-    while (!end())
+//    while (!end() && isSpace(c = getChar()));
+//    if (end())
+//        return std::string("");
+//    wordBuffer[len++] = c;
+//
+//    while (!end() && len < MAX_WORD_LENGTH)
+//    {
+//        c = getChar();
+//        if (isSpace(c))
+//        {
+//            if (c == '\n')
+//                point--;
+//            break;
+//        }
+//        if (!end())
+//            wordBuffer[len++] = c;
+//    }
+    while (!end() && len < MAX_WORD_LENGTH)
     {
-        c = fs.get();
+        c = getChar();
         if (isSpace(c))
         {
-            if (c == '\n')
-                fs.unget();
-            break;
+            if (len > 0)
+            {
+                if (c == '\n')
+                    point--;
+                break;
+            }
+            continue;
         }
-        if (!end())
-            word.push_back(c);
+        wordBuffer[len++] = c;
     }
-    return word;
+    return std::string(wordBuffer, len);
 }
 
 Reader::Reader(const char *filename)
 {
-    fs.open(filename);
-    if (!fs.good())
+    fin = fopen(filename, "r");
+    if (fin == NULL)
+    {
         std::cout << "cannot open file " << filename << std::endl;
+        return;
+    }
     startPos = 0;
-    fs.seekg(0, std::ifstream::end);
-    endPos = fs.tellg();
-    fs.seekg(0, std::ifstream::beg);
+    fseek(fin, 0, SEEK_END);
+    endPos = ftell(fin);
+    rewind(fin);
+    bufferSize = 1 << 26;
+    buffer = new char[bufferSize];
+    wordBuffer = new char[MAX_WORD_LENGTH];
+    point = bufferSize;
+    bufferLen = 0;
 }
 
 Reader::Reader(const char *filename, int totalPart, int part)
 {
-    fs.open(filename);
-    if (!fs.good())
+    fin = fopen(filename, "r");
+    if (fin == NULL)
+    {
         std::cout << "cannot open file " << filename << std::endl;
-    fs.seekg(0, std::ifstream::end);
-    unsigned int fileSize = fs.tellg();
+        return;
+    }
+    fseek(fin, 0, SEEK_END);
+    unsigned int fileSize = ftell(fin);
     startPos = part * (fileSize / totalPart);
-    fs.seekg(startPos, std::ifstream::beg);
+    fseek(fin, startPos, SEEK_SET);
     if (part + 1 == totalPart)
         endPos = fileSize;
     else
         endPos = (part + 1) * (fileSize / totalPart);
+    bufferSize = 1 << 20;
+    buffer = new char[bufferSize];
+    wordBuffer = new char[MAX_WORD_LENGTH];
+    point = bufferSize;
+    bufferLen = 0;
 }
 
 bool Reader::end()
 {
-    return fs.eof() || fs.tellg() >= endPos;
+    return (point >= bufferLen && feof(fin)) || ftell(fin) >= endPos;
 }
 
 Reader::~Reader()
 {
-    fs.close();
+    fclose(fin);
+    delete buffer;
+    delete wordBuffer;
 }
 
 std::vector<string> Reader::getSentence()
 {
     auto sentence = std::vector<string>();
-    while (!end() && fs.get() == '\n');
+    while (!end() && getChar() == '\n');
     if (end())
         return sentence;
-    fs.unget();
-    while (!end() && fs.get() != '\n')
+    point--;
+    while (!end() && getChar() != '\n')
     {
-        fs.unget();
+        point--;
         sentence.push_back(std::move(getWord()));
     }
     return sentence;
@@ -117,8 +177,8 @@ std::vector<string> Reader::getSentence()
 
 void Reader::reset()
 {
-    if (fs.is_open())
-        fs.seekg(startPos, std::ifstream::beg);
+    if (fin != NULL)
+        fseek(fin, startPos, SEEK_SET);
 }
 
 
