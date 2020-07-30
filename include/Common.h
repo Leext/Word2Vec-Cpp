@@ -13,9 +13,9 @@ template<typename T>
 inline T exp_fn(T x)
 {
     if (x > EXP_MAX)
-        return 1.0;
+        return exp(EXP_MAX);
     else if (x < -EXP_MAX)
-        return 0.0;
+        return exp(-EXP_MAX);
     else
         return exp(x);
 }
