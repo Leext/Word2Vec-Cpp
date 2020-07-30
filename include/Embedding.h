@@ -63,7 +63,7 @@ Vector<T> *Embedding<T>::forward(SentenceView &sentView, int cbow, Vector<T> *ou
     {
         res = out;
         for (int i = 0; i < embeddingSize; i++)
-            res->base[i] = 0;
+            (*res)[i] = 0;
     }
     int idx, base;
     if (cbow)
@@ -81,16 +81,16 @@ Vector<T> *Embedding<T>::forward(SentenceView &sentView, int cbow, Vector<T> *ou
             idx = sentView.sent[j];
             base = embeddingSize * idx;
             for (int i = 0; i < embeddingSize; i++)
-                res->base[i] += matrix[base + i];
+                (*res)[i] += matrix[base + i];
         }
         for (int i = 0; i < embeddingSize; i++)
-            res->base[i] /= C;
+            (*res)[i] /= C;
     } else
     {
         idx = sentView.sent[sentView.central];
         base = embeddingSize * idx;
         for (int i = 0; i < embeddingSize; i++)
-            res->base[i] += matrix[base + i];
+            (*res)[i] += matrix[base + i];
     }
     return res;
 }

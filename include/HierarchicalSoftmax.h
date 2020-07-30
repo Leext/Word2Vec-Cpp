@@ -69,7 +69,7 @@ Vector<T> *HierarchicalSoftmax<T>::forwardAndBackward(Vector<T> &h, int wordIdx,
     {
         gradH = out;
         for (int i = 0; i < embeddingSize; i++)
-            gradH->base[i] = 0;
+            (*gradH)[i] = 0;
     }
     auto &path = wordidx2path[wordIdx];
     for (auto &node : path)
@@ -81,7 +81,7 @@ Vector<T> *HierarchicalSoftmax<T>::forwardAndBackward(Vector<T> &h, int wordIdx,
         // backward
         for (int i = 0; i < embeddingSize; i++)
         {
-            gradH->base[i] += u * w[i];
+            (*gradH)[i] += u * w[i];
             w[i] -= lr * u * h[i];
         }
     }

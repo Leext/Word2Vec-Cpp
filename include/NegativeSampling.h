@@ -64,20 +64,21 @@ Vector<T> *NegativeSampling<T>::forwardAndBackward(Vector<T> &h, int wordIdx, T 
     {
         gradH = out;
         for (int i = 0; i < embeddingSize; i++)
-            gradH->base[i] = 0;
+            (*gradH)[i] = 0;
     }
 
     int base = wordIdx * embeddingSize;
     // forward
     T u = 0;
     for (int i = 0; i < embeddingSize; i++)
-        u += matrix[base + i] * h.base[i];
+        u += matrix[base + i] * h[i];
     u = sigmoid(u) - 1;
     // backward
     for (int i = 0; i < embeddingSize; i++)
-        gradH->base[i] += u * matrix[base + i];
-    for (int i = 0; i < embeddingSize; i++)
-        matrix[base + i] -= lr * u * h.base[i];
+    {
+        (*gradH)[i] += u * matrix[base + i];
+        matrix[base + i] -= lr * u * h[i];
+    }
     // neg word
     int negIdx;
     for (int i = 0; i < sampleSize; i++)
@@ -87,13 +88,14 @@ Vector<T> *NegativeSampling<T>::forwardAndBackward(Vector<T> &h, int wordIdx, T 
         base = negIdx * embeddingSize;
         u = 0;
         for (int j = 0; j < embeddingSize; j++)
-            u += matrix[base + j] * h.base[j];
+            u += matrix[base + j] * h[j];
         u = sigmoid(u);
         // backward
         for (int j = 0; j < embeddingSize; j++)
-            gradH->base[j] += u * matrix[base + j];
-        for (int j = 0; j < embeddingSize; j++)
-            matrix[base + j] -= lr * u * h.base[j];
+        {
+            (*gradH)[j] += u * matrix[base + j];
+            matrix[base + j] -= lr * u * h[j];
+        }
     }
     return gradH;
 }
