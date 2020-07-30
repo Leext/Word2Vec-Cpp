@@ -33,7 +33,7 @@ public:
 
     void init();
 
-    void dump(const char *filename);
+    void dump(const char *filename, int binary);
 
 private:
     void trainThread(const char *filename, int numIter, int threadId, int numThread, real lr);
@@ -83,6 +83,8 @@ void Word2vec::buildVocab(const char *filename, int minFreq)
                                [](const Word &a, const Word &b) -> bool
                                { return a.count >= b.count; }
     );
+//    for (auto i = it; i != vocab.end(); i++)
+//        printf("remove %s %d\n", i->word->c_str(), i->count);
     vocab.erase(it, vocab.end());
     printf("vocab size %d\n", vocab.size());
     for (int i = 0; i < vocab.size(); i++)
@@ -167,7 +169,7 @@ void Word2vec::trainThread(const char *filename, int numIter, int threadId, int 
             lineCount++;
         }
     }
-    printf("bp count %d\n", bpCount);
+//    printf("bp count %d\n", bpCount);
 }
 
 
@@ -180,21 +182,26 @@ void Word2vec::init()
         outputLayer = new NegativeSampling<real>(embeddingSize, vocab.size(), negSample, vocab);
 }
 
-void Word2vec::dump(const char *filename)
+void Word2vec::dump(const char *filename, int binary)
 {
-    FILE *fout = fopen(filename, "w");
+    FILE *fout;
+    fout = fopen(filename, "wb");
     if (fout == NULL)
     {
         printf("cannot open %s\n", filename);
         return;
     }
     fprintf(fout, "%d %d\n", vocab.size(), embeddingSize);
+    auto matrix = embedding->matrix;
     for (int i = 0; i < vocab.size(); i++)
     {
         fprintf(fout, "%s ", vocab[i].word->c_str());
-        auto w = embedding->get(i);
-        for (int j = 0; j < embeddingSize; j++)
-            fprintf(fout, "%f ", w[j]);
+        if (binary)
+            for (int j = 0; j < embeddingSize; j++)
+                fwrite(&matrix[i * embeddingSize + j], sizeof(real), 1, fout);
+        else
+            for (int j = 0; j < embeddingSize; j++)
+                fprintf(fout, "%f ", matrix[i * embeddingSize + j]);
         fprintf(fout, "\n");
     }
     fclose(fout);

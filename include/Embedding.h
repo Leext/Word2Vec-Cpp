@@ -20,12 +20,12 @@ public:
 
     Vector<T> *forward(SentenceView &sentView, int cbow, Vector<T> *out);
 
-    void backward(SentenceView &sentView, Vector<T> &grad, double lr, int cbow);
+    void backward(SentenceView &sentView, Vector<T> &grad, T lr, int cbow);
 
     Vector<T> get(int idx);
 
-private:
     T *matrix;
+private:
     int vocabSize;
     int embeddingSize;
 };
@@ -34,6 +34,11 @@ template<typename T>
 Embedding<T>::Embedding(int vocabSize, int embeddingSize) : vocabSize(vocabSize), embeddingSize(embeddingSize)
 {
     int n = embeddingSize * vocabSize;
+    if (n == 0)
+    {
+        printf("empty vocabulary!\n");
+        n = 1;
+    }
     matrix = new T[n];
     // init
     std::default_random_engine generator;
@@ -91,7 +96,7 @@ Vector<T> *Embedding<T>::forward(SentenceView &sentView, int cbow, Vector<T> *ou
 }
 
 template<typename T>
-void Embedding<T>::backward(SentenceView &sentView, Vector<T> &grad, double lr, int cbow)
+void Embedding<T>::backward(SentenceView &sentView, Vector<T> &grad, T lr, int cbow)
 {
     int idx, base;
     if (cbow)
