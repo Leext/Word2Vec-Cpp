@@ -71,23 +71,6 @@ std::string Reader::getWord()
 {
     int len = 0;
     int c;
-//    while (!end() && isSpace(c = getChar()));
-//    if (end())
-//        return std::string("");
-//    wordBuffer[len++] = c;
-//
-//    while (!end() && len < MAX_WORD_LENGTH)
-//    {
-//        c = getChar();
-//        if (isSpace(c))
-//        {
-//            if (c == '\n')
-//                point--;
-//            break;
-//        }
-//        if (!end())
-//            wordBuffer[len++] = c;
-//    }
     while (!end() && len < MAX_WORD_LENGTH)
     {
         c = getChar();
@@ -150,7 +133,7 @@ Reader::Reader(const char *filename, int totalPart, int part)
 
 bool Reader::end()
 {
-    return (point >= bufferLen && feof(fin)) || ftell(fin) >= endPos;
+    return (point >= bufferLen && (feof(fin) || ftell(fin) >= endPos));// || ;
 }
 
 Reader::~Reader()
